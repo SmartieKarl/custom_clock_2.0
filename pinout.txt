@@ -1,0 +1,35 @@
+Crude pinout file.
+
+4" TFT ILI9488
+VCC - 3v3
+GND - GND
+CS - 10
+RESET - 8
+DC/RS - 9
+MOSI - 11
+SCK - 12
+LED - 7
+MISO - 13
+T_CS - 4
+T_IRQ - 6
+
+MicroSD card reader
+MOSI - 11
+MISO - 13
+SCK - 12
+CS - 5
+
+DS3231 RTC
+SDA - 16
+SCL - 17
+SQW - 18
+
+MAX98357A amp
+BCLK - 1
+LRC / WS - 15
+DIN - 2
+SD - unconnected (42 if there's pops)
+
+RGB light strip
+DIN - 41
+VCC - 5v
