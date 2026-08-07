@@ -1,0 +1,43 @@
+Crude pinout file for reference.
+
+// TFT_eSPI (ILI9488 4" screen)
+#define TFT_MISO  13  // Automatically assigned with ESP8266 if not defined
+#define TFT_MOSI  12  // Automatically assigned with ESP8266 if not defined
+#define TFT_SCLK  11  // Automatically assigned with ESP8266 if not defined
+
+#define TFT_CS    10  // Chip select control pin
+#define TFT_DC    9  // Data Command control pin
+#define TFT_RST   8  // Reset pin
+
+#define TFT_BL 7  // LED back-light
+
+#define TOUCH_CS 4     // Chip select pin (T_CS) of touch screen
+#define TOUCH_IRQ 6 // Not part of the TFT_eSPI libary, defined in main instead
+
+// FSPI (TFT_eSPI uses HSPI and doesn't play nice with other devices)
+#define FSPI_SCK 48
+#define FSPI_MOSI 47
+#define FSPI_MISO 21
+
+// I2C
+#define I2C_SDA 16
+#define I2C_SCL 17
+
+// RFID-RC522
+#define RFID_CS 40
+#define RFID_RST 39
+
+// DS3231
+#define DS3231_SQW 18
+
+// MAX98357A amp
+#define AMP_BCLK 1 // bit clock
+#define AMP_LRC 15 // left-right clock
+#define AMP_DIN 2  // data in
+#define AMP_SD 42  // shutdown
+
+// MicroSD card reader
+#define SD_CS 5
+
+// RGB light control
+#define RGB_DIN 41

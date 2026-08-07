@@ -2,3 +2,4 @@ In the event of loss of libary config files, these are here as reference materia
 
 custom_clock_user_setup.h - TFT_eSPI library
 lv_conf.h - LVGL graphics library
+pinout.txt - pin connections

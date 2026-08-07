@@ -1,103 +1,210 @@
-#include <TFT_eSPI.h>
-#include <lvgl.h>
+#include <Arduino.h> // Arduino core library
+#include <SD.h>      // SD card support
+#include <SPI.h>     // SPI protocol support
+#include <Wire.h>    // I2C protocol support
+
+#include <MFRC522.h>  // RFID-RC522 core library
+#include <RTClib.h>   // DS3231 RTC core library
+#include <TFT_eSPI.h> // ST7789 TFT core library
+
+#include <Audio.h> // ESP32-audioI2S core library
+
+#include <FastLED.h> // For the SK6812 RGBW LED strip
+
+#include "alarm_system.h"
+#include "audio_control.h"
+#include "config.h"
+#include "rfid_control.h"
+#include "scheduler.h"
+#include "timekeeper.h"
 
 TFT_eSPI tft = TFT_eSPI();
+MFRC522 rfid(Pins::RFID_CS, Pins::RFID_RST);
+RTC_DS3231 rtc;
+CRGB leds[NUM_LEDS];
 
-// LVGL draw buffer
-static lv_color_t buf[SCREEN_WIDTH * 40]; // 40 lines buffer
-
-lv_display_t *disp;
-
-// LVGL display flush callback
-void my_disp_flush(lv_display_t *disp,
-                   const lv_area_t *area,
-                   uint8_t *px_map)
+void printTerminalMessage(const char *message, uint16_t color = TFT_WHITE)
 {
-    uint32_t w = area->x2 - area->x1 + 1;
-    uint32_t h = area->y2 - area->y1 + 1;
-
-    tft.startWrite();
-    tft.setAddrWindow(area->x1, area->y1, w, h);
-    tft.pushColors((uint16_t *)px_map, w * h, true);
-    tft.endWrite();
-
-    lv_display_flush_ready(disp);
+    tft.setTextColor(color);
+    tft.println(message);
 }
 
-// LVGL touch callback
-void my_touch_read(lv_indev_t *indev,
-                   lv_indev_data_t *data)
-{
-    uint16_t x, y;
-
-    if (tft.getTouch(&x, &y))
-    {
-        data->state = LV_INDEV_STATE_PRESSED;
-        data->point.x = x;
-        data->point.y = y;
-    }
-    else
-    {
-        data->state = LV_INDEV_STATE_RELEASED;
-    }
-}
-
+/*============================================================
+                            SETUP
+============================================================*/
 void setup()
 {
     Serial.begin(115200);
+    delay(100);
 
-    // TFT setup
-    tft.begin();
-    tft.setRotation(1);
+    // ===== Configure GPIOs =====
+    pinMode(Pins::AMP_SD, OUTPUT);
+    digitalWrite(Pins::AMP_SD, LOW); // Mute amplifier
 
-    // LVGL setup
-    lv_init();
+    pinMode(TFT_BL, OUTPUT);
+    digitalWrite(TFT_BL, HIGH);
 
-    // Create LVGL display
-    disp = lv_display_create(SCREEN_WIDTH, SCREEN_HEIGHT);
+    pinMode(Pins::TOUCH_IRQ, INPUT_PULLUP);
 
-    // Set flush callback
-    lv_display_set_flush_cb(disp, my_disp_flush);
+    // Set CS's to known state
+    pinMode(TFT_CS, OUTPUT);
+    pinMode(Pins::SD_CS, OUTPUT);
+    pinMode(Pins::RFID_CS, OUTPUT);
+    pinMode(TOUCH_CS, OUTPUT);
 
-    // Give LVGL the drawing buffer
-    lv_display_set_buffers(
-        disp,
-        buf,
-        NULL,
-        sizeof(buf),
-        LV_DISPLAY_RENDER_MODE_PARTIAL);
+    digitalWrite(TFT_CS, HIGH);
+    digitalWrite(Pins::SD_CS, HIGH);
+    digitalWrite(Pins::RFID_CS, HIGH);
+    digitalWrite(TOUCH_CS, HIGH);
 
-    // Create a label
-    lv_obj_t *label = lv_label_create(lv_screen_active());
+    // ===== Board Init =====
+    bool fail = false, wait = false;
+    // TFT
+    tft.init();
+    tft.setRotation(3);
+    tft.fillScreen(TFT_BLACK);
+    tft.setTextFont(1);
+    tft.setCursor(0, 0);
+    printTerminalMessage("- Michael's totally wicked custom clock 2.0 -\n");
 
-    lv_label_set_text(label, "Hello, world!");
+    // SPI (FSPI alt bus)
+    SPI.begin(Pins::FSPI_SCK, Pins::FSPI_MISO, Pins::FSPI_MOSI, -1);
 
-    lv_obj_set_style_text_font(
-        label,
-        &lv_font_montserrat_32,
-        0);
+    // RFID
+    rfid.PCD_Init();
+    rfid.PCD_AntennaOn();
+    byte version = rfid.PCD_ReadRegister(MFRC522::VersionReg);
+    if (version == 0x00 || version == 0xFF)
+    {
+        printTerminalMessage("RFID module failed to respond.", TFT_RED);
+        fail = true;
+    }
 
-    lv_obj_center(label);
+    // MicroSD
+    if (!SD.begin(Pins::SD_CS, SPI))
+    {
+        printTerminalMessage("MicroSD Card module failed to respond.", TFT_RED);
+        fail = true;
+    }
 
-    // Create touch input device
-    lv_indev_t *indev = lv_indev_create();
+    // I2C
+    if (!Wire.begin(Pins::I2C_SDA, Pins::I2C_SCL))
+    {
+        printTerminalMessage("I2C failed to initialize.", TFT_RED);
+        fail = true;
+    }
 
-    lv_indev_set_type(indev, LV_INDEV_TYPE_POINTER);
+    // RTC
+    if (!rtc.begin())
+    {
+        printTerminalMessage("RTC module failed to respond.", TFT_RED);
+        fail = true;
+    }
+    else
+    {
+        if (rtc.lostPower())
+        {
+            printTerminalMessage("RTC module experienced a power loss. Resetting time...", TFT_YELLOW);
+            rtc.adjust(DateTime(0, 1, 1, 0, 0, 0));
+            rtc.setAlarm1(DateTime(0, 0, 0, 0, 0, 0), DS3231_A1_Hour);
+            rtc.disableAlarm(1);
+            wait = true;
+        }
+    }
 
-    lv_indev_set_read_cb(indev, my_touch_read);
+    // RGBW LEDs
+    FastLED.addLeds<SK6812, Pins::RGB_DIN, GRB>(leds, NUM_LEDS).setRgbw(RgbwDefault());
+    FastLED.setBrightness(255);
+    FastLED.setMaxPowerInVoltsAndMilliamps(5, 1500); // 5v 1500mA
+    FastLED.clear();
+    FastLED.show();
 
-    // Create a button
-    lv_obj_t *btn = lv_button_create(lv_screen_active());
-    lv_obj_set_size(btn, 150, 70);
-    lv_obj_align(btn, LV_ALIGN_CENTER, 0, 60);
+    // ===== Services Init =====
+    audioControl.begin(0, 3); // Core 0 and highest priority to avoid streaming lag.
+    timekeeper.begin(rtc);
+    if (!alarmSystem.begin(rtc))
+    {
+        printTerminalMessage("Alarm System failed to start.", TFT_RED);
+        fail = true;
+    }
+    rfidControl.begin(rfid);
 
-    lv_obj_t *btn_label = lv_label_create(btn);
-    lv_label_set_text(btn_label, "Press me");
-    lv_obj_center(btn_label);
+    if (fail)
+    {
+        printTerminalMessage("\nWarning: something failed during startup.\nThe device will not work as intended!", TFT_YELLOW);
+        wait = true;
+    }
+
+    if (wait)
+    {
+        printTerminalMessage("\nTap anywhere to continue...");
+        while (digitalRead(Pins::TOUCH_IRQ) == HIGH)
+            ; // Wait until t_irq pulls low
+    }
+
+    /*
+    Start UI, switch to main clock screen, etc.
+    */
 }
 
+constexpr int touchPollFrequency = 1000 / 30; // ms
+uint32_t lastTouchPoll = 0;
 void loop()
 {
-    lv_timer_handler(); // Let LVGL update
-    delay(5);
+    if (timekeeper.tick()) //Secondly updates
+    {
+        /* 
+        Run UI updates, update clock screen, etc. here
+        */
+
+        scheduler.run();
+    }
+
+    if (millis() - lastTouchPoll > touchPollFrequency)
+    {
+        lastTouchPoll = millis();
+
+        if (digitalRead(Pins::TOUCH_IRQ) == LOW)
+        {
+            /*
+            Run touch logic here
+            */
+           int foo;
+        }
+    }
 }
+
+
+
+
+
+
+
+
+
+/*======================================================================
+                                TODO
+======================================================================
+
+===== ASAP =====
+BACKEND
+- Add Network functions/tasks
+- Add a screen brightness controller
+
+FRONTEND
+- Export and integrate squareline studio UI
+
+
+===== EVENTUALLY =====
+BACKEND
+- RGBW LED functions
+- Comms to light bar on wall of room?
+- Log system?
+- Command system?
+- Link to computer to view SD files? Boot mode switching for this?
+
+FRONTEND
+- Settings menu, weather sprites, etc
+- CAD design: Case and material selection
+- PCB design: one-sided? two-sided? dims?
+*/
