@@ -1,5 +1,6 @@
 #pragma once
 
+#include "secret.h"
 #include <stdint.h>
 
 // config.h
@@ -44,3 +45,29 @@ constexpr uint8_t RGB_DIN = 41;
 
 // For light strip
 constexpr uint8_t NUM_LEDS = 144;
+
+/*
+========================================
+              IMPORTANT
+========================================
+ This code requires a secret.h file that contains the following namespace inside:
+namespace Secret
+{
+// WiFi and Clock sync settings
+constexpr const char *WIFI_SSID = "ssid";
+constexpr const char *WIFI_PASSWORD = "password";
+constexpr const char *TIME_ZONE = "time.zone"; // in POSIX time zone format
+
+// Weather API settings (API key from OpenWeatherMap)
+constexpr const char *WEATHER_API_KEY = "abcdef";
+constexpr const char *WEATHER_LOCATION = "City,ST,US";
+
+// Master NFC tag UID
+constexpr const char *ALARM_CARD_UID = "12345";
+
+// Blynk inegration
+constexpr const char *BLYNK_TEMPLATE_ID = "tempID";
+constexpr const char *BLYNK_TEMPLATE_NAME = "Custom Clock 2.0";
+constexpr const char *BLYNK_AUTH = "-auth code";
+}; // namespace Secret
+*/
