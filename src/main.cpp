@@ -1,22 +1,24 @@
-#include <Arduino.h> // Arduino core library
-#include <SD.h>      // SD card support
-#include <SPI.h>     // SPI protocol support
-#include <Wire.h>    // I2C protocol support
+#include <Arduino.h>
+#include <MFRC522.h>
+#include <RTClib.h>
+#include <SD.h>
+#include <SPI.h>
+#include <TFT_eSPI.h>
+#include <Wire.h>
 
-#include <MFRC522.h>  // RFID-RC522 core library
-#include <RTClib.h>   // DS3231 RTC core library
-#include <TFT_eSPI.h> // ST7789 TFT core library
+#include <Audio.h>
 
-#include <Audio.h> // ESP32-audioI2S core library
-
-#include <FastLED.h> // For the SK6812 RGBW LED strip
+#include <FastLED.h>
 
 #include "alarm_system.h"
 #include "audio_control.h"
+#include "blynk_client.h"
 #include "config.h"
 #include "rfid_control.h"
 #include "scheduler.h"
+#include "time_sync.h"
 #include "timekeeper.h"
+#include "weather_sync.h"
 
 TFT_eSPI tft = TFT_eSPI();
 MFRC522 rfid(Pins::RFID_CS, Pins::RFID_RST);
@@ -129,12 +131,29 @@ void setup()
     }
     rfidControl.begin(rfid);
 
+    // Network stuff
+    if (!timeSync.begin(rtc))
+    {
+        printTerminalMessage("timeSync failed to start.", TFT_RED);
+        fail = true;
+    }
+    if (weatherSync.begin())
+    {
+        printTerminalMessage("timeSync failed to start.", TFT_RED);
+        fail = true;
+    }
+    if (blynkClient.begin())
+    {
+        printTerminalMessage("timeSync failed to start.", TFT_RED);
+        fail = true;
+    }
+
+    // Flag handling
     if (fail)
     {
         printTerminalMessage("\nWarning: something failed during startup.\nThe device will not work as intended!", TFT_YELLOW);
         wait = true;
     }
-
     if (wait)
     {
         printTerminalMessage("\nTap anywhere to continue...");
@@ -151,9 +170,9 @@ constexpr int touchPollFrequency = 1000 / 30; // ms
 uint32_t lastTouchPoll = 0;
 void loop()
 {
-    if (timekeeper.tick()) //Secondly updates
+    if (timekeeper.tick()) // Secondly updates
     {
-        /* 
+        /*
         Run UI updates, update clock screen, etc. here
         */
 
@@ -169,18 +188,10 @@ void loop()
             /*
             Run touch logic here
             */
-           int foo;
+            int foo;
         }
     }
 }
-
-
-
-
-
-
-
-
 
 /*======================================================================
                                 TODO
@@ -188,7 +199,7 @@ void loop()
 
 ===== ASAP =====
 BACKEND
-- Add Network functions/tasks
+- Setup blynk stuff, get comms to it functional
 - Add a screen brightness controller
 
 FRONTEND
