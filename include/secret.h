@@ -17,7 +17,7 @@ constexpr const char *WEATHER_UNITS = "imperial";
 constexpr const char *ALARM_CARD_UID = "047742AD6B6D70";
 
 // Blynk inegration
-constexpr const char *BLYNK_TEMPLATE_ID = "TMPL26HlUTVsE";
-constexpr const char *BLYNK_TEMPLATE_NAME = "Custom Clock";
-constexpr const char *BLYNK_AUTH = "-dzT6qHzOQTMDGbdcka2qJwm-Z3Dwx32";
+constexpr const char *BLYNK_TEMPLATE_ID = "TMPL2VFXLQNJk";
+constexpr const char *BLYNK_TEMPLATE_NAME = "Custom Clock 2";
+constexpr const char *BLYNK_AUTH = "blwD5figewbQloD8sYxdqzxgSxwlHmuS"; // Individual to device, this one is 2.0
 }; // namespace Secret
