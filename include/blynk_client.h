@@ -11,8 +11,8 @@ class BlynkClient
     BlynkClient();
 
     bool begin();
-    bool sync();
-    void syncViaTaskRunner();
+    bool connect();
+    void connectViaTaskRunner();
 
   private:
     TaskHandle_t taskHandle_;

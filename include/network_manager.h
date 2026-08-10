@@ -1,4 +1,5 @@
 #pragma once
+#include <Arduino.h>
 
 // network_manager.h
 // Thread-safe, client-based network connection manager module

@@ -3,12 +3,12 @@
 #include "config.h"
 #include "timekeeper.h"
 #include <RTClib.h>
-#include <functional>
 #include <stdint.h>
 
 // alarm_system.h
 // Central alarm control system
 
+#define DEFAULT_ALARM_TRACK_FILE_PATH "/test.mp3"
 struct AlarmTime
 {
     uint8_t hour;
@@ -30,6 +30,12 @@ class AlarmSystem
     AlarmTime getAlarm();
     void setAlarm(uint8_t hr, uint8_t min, bool enable);
 
+    const uint8_t getAlarmVolume() const;
+    void setAlarmVolume(uint8_t volume);
+
+    const char *getAlarmTrackFilePath() const;
+    bool setAlarmTrackFilePath(const char *path);
+
     bool ringing();
 
   private:
@@ -40,12 +46,13 @@ class AlarmSystem
     AlarmTime alarm_;
 
     uint8_t alarmVolume_ = 15;
-    char alarmTrackFileName_[32];
+    char alarmTrackFilePath_[32] = DEFAULT_ALARM_TRACK_FILE_PATH;
 
     TaskHandle_t taskHandle_;
 
-    static void taskRunner(void *pvParameters);
+    static void taskRunner_(void *pvParameters);
     bool isRTCAlarmEnabled_(uint8_t alarmNumber = RTC_ALARM_NUM_);
+    bool isValidAlarmTrackPath_(const char *path) const;
 };
 
 extern AlarmSystem alarmSystem; // Universal AlarmSystem

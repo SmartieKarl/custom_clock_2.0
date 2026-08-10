@@ -51,8 +51,7 @@ constexpr uint8_t NUM_LEDS = 144;
               IMPORTANT
 ========================================
  This code requires a secret.h file that contains the following namespace inside:
-namespace Secret
-{
+
 // WiFi and Clock sync settings
 constexpr const char *WIFI_SSID = "ssid";
 constexpr const char *WIFI_PASSWORD = "password";
@@ -66,8 +65,7 @@ constexpr const char *WEATHER_LOCATION = "City,ST,US";
 constexpr const char *ALARM_CARD_UID = "12345";
 
 // Blynk inegration
-constexpr const char *BLYNK_TEMPLATE_ID = "tempID";
-constexpr const char *BLYNK_TEMPLATE_NAME = "Custom Clock 2.0";
-constexpr const char *BLYNK_AUTH = "-auth code";
-}; // namespace Secret
+#define *BLYNK_TEMPLATE_ID "tempID"
+#define *BLYNK_TEMPLATE_NAME "Custom Clock 2"
+#define *BLYNK_AUTH "auth code"
 */

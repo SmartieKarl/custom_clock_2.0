@@ -44,7 +44,7 @@ bool NetworkManager::startWiFiSession()
     {
         connecting_ = true;
         WiFi.mode(WIFI_STA);
-        WiFi.begin(Secret::WIFI_SSID, Secret::WIFI_PASSWORD);
+        WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
 
         unsigned long start = millis();
 

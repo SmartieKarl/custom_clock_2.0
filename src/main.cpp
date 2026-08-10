@@ -13,7 +13,9 @@
 #include "alarm_system.h"
 #include "audio_control.h"
 #include "blynk_client.h"
+#include "command_interface.h"
 #include "config.h"
+#include "log.h"
 #include "rfid_control.h"
 #include "scheduler.h"
 #include "time_sync.h"
@@ -24,6 +26,61 @@ TFT_eSPI tft = TFT_eSPI();
 MFRC522 rfid(Pins::RFID_CS, Pins::RFID_RST);
 RTC_DS3231 rtc;
 CRGB leds[NUM_LEDS];
+
+// Switch to help debug reason for crash/reset
+const char *resetReasonToString(esp_reset_reason_t reason)
+{
+    switch (reason)
+    {
+    case ESP_RST_UNKNOWN:
+        return "Unknown";
+
+    case ESP_RST_POWERON:
+        return "Power-on reset";
+
+    case ESP_RST_EXT:
+        return "External pin reset";
+
+    case ESP_RST_SW:
+        return "Software reset";
+
+    case ESP_RST_PANIC:
+        return "Exception/panic reset";
+
+    case ESP_RST_INT_WDT:
+        return "Interrupt watchdog reset";
+
+    case ESP_RST_TASK_WDT:
+        return "Task watchdog reset";
+
+    case ESP_RST_WDT:
+        return "Other watchdog reset";
+
+    case ESP_RST_DEEPSLEEP:
+        return "Wake from deep sleep";
+
+    case ESP_RST_BROWNOUT:
+        return "Brownout reset";
+
+    case ESP_RST_SDIO:
+        return "SDIO reset";
+
+    default:
+        return "Invalid/reset reason not recognized";
+    }
+}
+
+void logResetReason()
+{
+    esp_reset_reason_t reason = esp_reset_reason();
+
+    LOG.log(
+        "\nREBOOT\n"
+        "Reset code: %d\n"
+        "Reason: %s",
+        int(reason),
+        resetReasonToString(reason));
+}
 
 void printTerminalMessage(const char *message, uint16_t color = TFT_WHITE)
 {
@@ -38,6 +95,9 @@ void setup()
 {
     Serial.begin(115200);
     delay(100);
+
+    LOG.begin();
+    logResetReason();
 
     // ===== Configure GPIOs =====
     pinMode(Pins::AMP_SD, OUTPUT);
@@ -170,6 +230,8 @@ constexpr int touchPollFrequency = 1000 / 30; // ms
 uint32_t lastTouchPoll = 0;
 void loop()
 {
+    commandInterface.handleSerialIn();
+
     if (timekeeper.tick()) // Secondly updates
     {
         /*
@@ -191,6 +253,8 @@ void loop()
             int foo;
         }
     }
+
+    yield();
 }
 
 /*======================================================================
@@ -199,8 +263,8 @@ void loop()
 
 ===== ASAP =====
 BACKEND
-- Setup blynk stuff, get comms to it functional
 - Add a screen brightness controller
+- Get Log system fully integrated
 
 FRONTEND
 - Export and integrate squareline studio UI

@@ -1,9 +1,11 @@
 // #define BLYNK_DEBUG
 // #define BLYNK_PRINT Serial
 #include "blynk_client.h"
+#include "command_interface.h"
 #include "config.h"
 #include "network_manager.h"
 #include "scheduler.h"
+#include "log.h"
 
 #include <BlynkSimpleEsp32.h>
 
@@ -20,12 +22,12 @@ bool BlynkClient::begin()
             "blynkClient",
             [](void *context)
             {
-                static_cast<BlynkClient *>(context)->syncViaTaskRunner();
+                static_cast<BlynkClient *>(context)->connectViaTaskRunner();
             },
             this))
         return false;
 
-    Blynk.config(Secret::BLYNK_AUTH);
+    Blynk.config(BLYNK_AUTH);
 
     xTaskCreatePinnedToCore(
         taskRunner_,
@@ -39,10 +41,10 @@ bool BlynkClient::begin()
     return taskHandle_ != NULL;
 }
 
-bool BlynkClient::sync()
+bool BlynkClient::connect()
 {
     constexpr int MAX_RETRIES = 5;
-    constexpr unsigned long BURST_MS = 20000;
+    constexpr unsigned long BURST_MS = 20000; // How long the ocnnect session will stay open
 
     const bool persistent = networkManager.isWiFiPersistent();
     bool connected = false;
@@ -99,7 +101,7 @@ bool BlynkClient::sync()
 }
 
 // Notifies the taskRunner to run sync(). Recommended to prevent blocking.
-void BlynkClient::syncViaTaskRunner()
+void BlynkClient::connectViaTaskRunner()
 {
     if (taskHandle_ != NULL)
         xTaskNotifyGive(taskHandle_);
@@ -112,16 +114,20 @@ void BlynkClient::taskRunner_(void *pvParameters)
     for (;;)
     {
         ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
-        instance->sync();
+        instance->connect();
     }
 }
 
 void BlynkClient::handleVirtualWrite_(const char *value)
 {
     Serial.println("BlynkClient: virtual write received");
-    if (value != nullptr && value[0] != '\0')
+    const char *rsp = commandInterface.handleBlynkIn(value);
+    if (rsp[0] != '\0') // Will be '\0' if the read command had the signature clock prefix: [CLK]:
     {
-        Blynk.virtualWrite(V0, value);
+        // Write and notify
+        Blynk.virtualWrite(V0, rsp);
+        Blynk.logEvent("clock_reply", rsp);
+        Serial.printf("rsp <%s> written to pin V0.", rsp);
     }
 }
 
@@ -130,6 +136,23 @@ void BlynkClient::handleConnected_()
     Serial.println("BlynkClient: connected");
     Blynk.sendCmd(BLYNK_CMD_PING);
     Blynk.syncVirtual(V0);
+
+    // Log flush
+    char buf[LOG_ENTRY_SIZE];
+
+    String summary;
+
+    while (LOG.pop(buf))
+    {
+        summary += buf;
+        summary += "\n";
+    }
+
+    if (summary.length())
+    {
+        Blynk.virtualWrite(V1, summary);
+        Blynk.logEvent("clock_log", summary);
+    }
 }
 
 BLYNK_WRITE(V0)

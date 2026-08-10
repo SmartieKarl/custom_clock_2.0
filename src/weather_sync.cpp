@@ -80,6 +80,8 @@ bool WeatherSync::begin()
         1,
         &taskHandle_,
         0);
+
+    return true;
 }
 
 // Syncs weather from OpenWeatherMap
@@ -101,9 +103,9 @@ bool WeatherSync::sync()
         url,
         sizeof(url),
         "http://api.openweathermap.org/data/2.5/weather?q=%s&appid=%s&units=%s",
-        Secret::WEATHER_LOCATION,
-        Secret::WEATHER_API_KEY,
-        Secret::WEATHER_UNITS);
+        WEATHER_LOCATION,
+        WEATHER_API_KEY,
+        WEATHER_UNITS);
 
     HTTPClient http;
     http.setTimeout(10000);

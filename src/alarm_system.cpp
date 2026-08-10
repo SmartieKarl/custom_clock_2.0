@@ -6,6 +6,7 @@
 #include "rfid_control.h"
 #include "scheduler.h"
 #include "timekeeper.h"
+#include "utils.h"
 
 AlarmSystem alarmSystem; // Global shared instance
 
@@ -50,7 +51,7 @@ bool AlarmSystem::begin(RTC_DS3231 &rtc)
 
     // Initialize the alarm task
     xTaskCreatePinnedToCore(
-        taskRunner,
+        taskRunner_,
         "AlarmTask",
         2048,
         this,
@@ -66,7 +67,7 @@ void AlarmSystem::triggerAlarm()
 {
     // Play alarm track
     audioControl.setVolume(alarmVolume_);
-    audioControl.connectToSD(alarmTrackFileName_);
+    audioControl.connectToSD(alarmTrackFilePath_);
 
     ringing_ = true;
 
@@ -84,7 +85,7 @@ void AlarmSystem::dismissAlarm()
     ringing_ = false;
 }
 
-void AlarmSystem::taskRunner(void *pvParameters)
+void AlarmSystem::taskRunner_(void *pvParameters)
 {
     // Set AlarmSystem instance to this
     AlarmSystem *instance = static_cast<AlarmSystem *>(pvParameters);
@@ -134,6 +135,41 @@ void AlarmSystem::setAlarm(uint8_t hr, uint8_t min, bool enable)
         rtc_->disableAlarm(RTC_ALARM_NUM_);
         scheduler.setTimestamps("alarm", {});
     }
+}
+
+// Returns the alarm volume
+const uint8_t AlarmSystem::getAlarmVolume() const
+{
+    return alarmVolume_;
+}
+
+// Sets the volume of the alarm (0-21)
+void AlarmSystem::setAlarmVolume(uint8_t volume)
+{
+    if (!(volume < 0 || volume > 21))
+        alarmVolume_ = volume;
+}
+
+const char *AlarmSystem::getAlarmTrackFilePath() const
+{
+    return alarmTrackFilePath_;
+}
+
+bool AlarmSystem::setAlarmTrackFilePath(const char *path)
+{
+    if (!isValidSdPath(path))
+        return false;
+
+    if (path == nullptr || path[0] == '\0')
+        return false;
+
+    const size_t len = strlen(path);
+    if (len >= sizeof(alarmTrackFilePath_))
+        return false;
+
+    strncpy(alarmTrackFilePath_, path, sizeof(alarmTrackFilePath_) - 1);
+    alarmTrackFilePath_[sizeof(alarmTrackFilePath_) - 1] = '\0';
+    return true;
 }
 
 // Returns if the alarm is ringing

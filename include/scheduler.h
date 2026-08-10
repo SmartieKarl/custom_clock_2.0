@@ -12,7 +12,7 @@ class Scheduler
 {
   public:
     static constexpr uint8_t MAX_TIMESTAMPS = 4;
-    static constexpr uint8_t SCHEDULE_SIZE = 3;
+    static constexpr uint8_t SCHEDULE_SIZE = 4;
 
     struct ScheduledItem
     {
@@ -35,7 +35,8 @@ class Scheduler
         {
             {"alarm", {-1, -1, -1, -1}, nullptr, nullptr},
             {"timeSync", {0, -1, -1, -1}, nullptr, nullptr},             // Midnight
-            {"blynkConnect", {2400, 2415, 2430, 2445}, nullptr, nullptr} // Every 15 mins
+            {"weatherSync", {2400, 2415, 2430, 2445}, nullptr, nullptr}, // Every 15 mins
+            {"blynkClient", {2400, 2415, 2430, 2445}, nullptr, nullptr} // Every 15 mins
     };
 
     // Helpers
