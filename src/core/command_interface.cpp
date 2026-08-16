@@ -1,7 +1,11 @@
 #include "command_interface.h"
 
+#include "alarm_system.h"
+#include "audio_control.h"
 #include "config.h"
+#include "network_manager.h"
 #include "time_sync.h"
+#include "timekeeper.h"
 #include "utils.h"
 #include "weather_sync.h"
 
@@ -395,7 +399,7 @@ void CommandInterface::cmdAlarmVolume(int argc, char *argv[])
     if (argc == 2)
     {
         char *endptr;
-        long v = std::strtol(argv[2], &endptr, 10);
+        long v = std::strtol(argv[1], &endptr, 10);
         if (endptr == argv[2] || *endptr != '\0' || v < 0 || v > 21)
         {
             CMD_APPEND("Err: volume must be between 0 and 21");

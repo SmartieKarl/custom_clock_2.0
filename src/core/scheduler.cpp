@@ -43,6 +43,7 @@ bool Scheduler::registerCallback(const char *name, void (*cb)(void *), void *con
         return false; // Name not found in schedule_
 
     schedule_[index].callback = cb;
+    schedule_[index].context = context;
     return true;
 }
 

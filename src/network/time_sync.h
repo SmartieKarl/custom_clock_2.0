@@ -11,7 +11,7 @@ class TimeSync
   public:
     TimeSync();
 
-    bool begin(RTC_DS3231 rtc);
+    bool begin(RTC_DS3231 &rtc);
     bool sync();
     void syncViaTaskRunner();
 

@@ -9,7 +9,7 @@ TimeSync::TimeSync()
 {
 }
 
-bool TimeSync::begin(RTC_DS3231 rtc)
+bool TimeSync::begin(RTC_DS3231 &rtc)
 {
     rtc_ = &rtc;
 
@@ -31,6 +31,8 @@ bool TimeSync::begin(RTC_DS3231 rtc)
         1,
         &taskHandle_,
         0);
+
+    return taskHandle_ != NULL;
 }
 
 // Syncs time via NTP servers
@@ -90,6 +92,6 @@ void TimeSync::taskRunner_(void *pvParameters)
     {
         ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
         instance->sync();
-            // LOG IMPLEMENTATION HERE (if not sync)
+        // LOG IMPLEMENTATION HERE (if not sync)
     }
 }

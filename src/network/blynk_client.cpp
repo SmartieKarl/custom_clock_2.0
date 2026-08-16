@@ -2,14 +2,17 @@
 // #define BLYNK_PRINT Serial
 #include "blynk_client.h"
 #include "command_interface.h"
-#include "config.h"
+#include "led_config.h"
+#include "log.h"
 #include "network_manager.h"
 #include "scheduler.h"
-#include "log.h"
 
 #include <BlynkSimpleEsp32.h>
+#include <FastLED.h>
 
 BlynkClient blynkClient; // Global shared instance
+
+extern CRGB leds[NUM_LEDS];
 
 BlynkClient::BlynkClient()
     : taskHandle_(NULL)
@@ -18,6 +21,7 @@ BlynkClient::BlynkClient()
 
 bool BlynkClient::begin()
 {
+    Serial.println("BlynkClient: begin() called.");
     if (!scheduler.registerCallback(
             "blynkClient",
             [](void *context)
@@ -25,14 +29,17 @@ bool BlynkClient::begin()
                 static_cast<BlynkClient *>(context)->connectViaTaskRunner();
             },
             this))
+    {
+        Serial.println("BlynkClient: Failed to start!");
         return false;
+    }
 
     Blynk.config(BLYNK_AUTH);
 
     xTaskCreatePinnedToCore(
         taskRunner_,
         "BlynkClientTask",
-        4096,
+        8192,
         this,
         1,
         &taskHandle_,
@@ -75,23 +82,11 @@ bool BlynkClient::connect()
     if (!Blynk.connected())
         return false;
 
-    if (persistent)
+    const unsigned long start = millis();
+    while (networkManager.isWiFiPersistent() || millis() - start < BURST_MS)
     {
-        while (networkManager.isWiFiPersistent())
-        {
-            Blynk.run();
-            vTaskDelay(pdMS_TO_TICKS(10));
-        }
-        Serial.println("BlynkClient: persistence ended, closing WiFi.");
-    }
-    else
-    {
-        const unsigned long start = millis();
-        while (millis() - start < BURST_MS)
-        {
-            Blynk.run();
-            vTaskDelay(pdMS_TO_TICKS(10));
-        }
+        Blynk.run();
+        vTaskDelay(pdMS_TO_TICKS(10));
     }
 
     Blynk.disconnect();
@@ -118,10 +113,13 @@ void BlynkClient::taskRunner_(void *pvParameters)
     }
 }
 
-void BlynkClient::handleVirtualWrite_(const char *value)
+// Blynk macro compatability layers
+
+// cmd stream
+void BlynkClient::handleVirtualWrite_0_(const char *param)
 {
     Serial.println("BlynkClient: virtual write received");
-    const char *rsp = commandInterface.handleBlynkIn(value);
+    const char *rsp = commandInterface.handleBlynkIn(param);
     if (rsp[0] != '\0') // Will be '\0' if the read command had the signature clock prefix: [CLK]:
     {
         // Write and notify
@@ -131,11 +129,12 @@ void BlynkClient::handleVirtualWrite_(const char *value)
     }
 }
 
+// On connect
 void BlynkClient::handleConnected_()
 {
     Serial.println("BlynkClient: connected");
     Blynk.sendCmd(BLYNK_CMD_PING);
-    Blynk.syncVirtual(V0);
+    Blynk.syncAll();
 
     // Log flush
     char buf[LOG_ENTRY_SIZE];
@@ -155,11 +154,68 @@ void BlynkClient::handleConnected_()
     }
 }
 
+// Command stream macro
 BLYNK_WRITE(V0)
 {
-    blynkClient.handleVirtualWrite_(param.asStr());
+    blynkClient.handleVirtualWrite_0_(param.asStr());
 }
 
+// V1 is the Log output stream. Not read
+
+// LED color stream macro (param string, 3 seperate color values)
+BLYNK_WRITE(V2)
+{
+    int r = param[0].asInt();
+    int g = param[1].asInt();
+    int b = param[2].asInt();
+
+    ledConfig.color = CRGB(r, g, b);
+
+    fill_solid(leds, NUM_LEDS, ledConfig.color);
+    FastLED.show();
+}
+
+// LED toggle stream macro (param 0-1)
+BLYNK_WRITE(V3)
+{
+    bool ledsOn = param.asInt(); // data stream should only accept 1 or 0
+
+    if (ledsOn)
+    {
+        ledConfig.override = true;
+        fill_solid(leds, NUM_LEDS, ledConfig.color);
+        FastLED.setBrightness(ledConfig.brightness);
+        FastLED.show();
+    }
+    else
+    {
+        ledConfig.override = false;
+        fill_solid(leds, NUM_LEDS, CRGB::Black);
+        FastLED.show();
+    }
+}
+
+// LED brightness stream macro (param 0-100)
+BLYNK_WRITE(V4)
+{
+    ledConfig.brightness = map(param.asInt(), 0, 100, 0, 255);
+
+    if (ledConfig.override)
+    {
+        FastLED.setBrightness(ledConfig.brightness);
+        FastLED.show();
+    }
+}
+
+// LED animation speed stream macro (param 0-10000)
+BLYNK_WRITE(V5)
+{
+    ledConfig.animationSpeedMs = param.asInt();
+
+    // Future logic for animations here
+}
+
+// Blynk on connect macro
 BLYNK_CONNECTED()
 {
     blynkClient.handleConnected_();

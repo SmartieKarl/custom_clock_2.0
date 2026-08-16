@@ -10,6 +10,9 @@
 
 AlarmSystem alarmSystem; // Global shared instance
 
+#define DS3231_ADDRESS 0x68
+#define DS3231_CONTROL 0x0E
+
 // Constructor
 AlarmSystem::AlarmSystem()
     : ringing_(false), alarm_({0, 00, false}), taskHandle_(NULL)
@@ -101,7 +104,7 @@ void AlarmSystem::taskRunner_(void *pvParameters)
         {
             if (millis() - lastRfidCheck >= rfidPollInterval)
             {
-                lastRfidCheck - millis();
+                lastRfidCheck = millis();
                 rfidControl.poll(cardUID);
                 if (!(cardUID[0] = '\0'))
                 {
@@ -138,7 +141,7 @@ void AlarmSystem::setAlarm(uint8_t hr, uint8_t min, bool enable)
 }
 
 // Returns the alarm volume
-const uint8_t AlarmSystem::getAlarmVolume() const
+uint8_t AlarmSystem::getAlarmVolume() const
 {
     return alarmVolume_;
 }

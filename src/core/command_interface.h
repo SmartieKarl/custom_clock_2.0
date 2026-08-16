@@ -1,10 +1,5 @@
 #pragma once
 
-#include "alarm_system.h"
-#include "audio_control.h"
-#include "network_manager.h"
-#include "timekeeper.h"
-
 #include <Arduino.h>
 #include <stddef.h>
 
@@ -71,16 +66,16 @@ class CommandInterface
     const Command commands_[NUM_COMMANDS] = {
         {"help", &CommandInterface::cmdHelp, "prints this index of commands and usage"},
         {"status", &CommandInterface::cmdStatus, "status"},
-        {"time", &CommandInterface::cmdTime, "time <set> <hour> <minute> <month> <day> <year>"},
+        {"time", &CommandInterface::cmdTime, "time set <year> <month> <day> <hour> <minute> <second>"},
         {"log", &CommandInterface::cmdLog, "log <log <message>> || <pop> || <size> || <printall> || <dumpbuffer> || <save> || <load>"},
         {"alarm", &CommandInterface::cmdAlarm, "alarm <set> <hour> <minute> || <disable>"},
-        {"alarmvolume", &CommandInterface::cmdAlarmVolume, "alarmvolume <vol>"},
+        {"alarmvolume", &CommandInterface::cmdAlarmVolume, "alarmvolume <vol>"}, // Crashes on any argument, handles wrong argument amount fine.
         {"alarmtrack", &CommandInterface::cmdAlarmTrack, "alarmtrack <fileLocation>"},
-        {"vol", &CommandInterface::cmdVol, "vol <0-30>"},
-        {"play", &CommandInterface::cmdPlay, "play <folder> <track> [vol = DEFAULT]"},
+        {"vol", &CommandInterface::cmdVol, "vol <0-21>"},
+        {"play", &CommandInterface::cmdPlay, "play <path>, <vol = DEFAULT>"},
         {"stop", &CommandInterface::cmdStop, "stop"},
-        {"sync", &CommandInterface::cmdSync, "sync <time> || <weather>"},
-        {"wifisession", &CommandInterface::cmdWiFiSession, "wifisession <on> || <off>"}};
+        {"sync", &CommandInterface::cmdSync, "sync <time> || <weather>"}, // Crashes on valid input (sync time || weather)
+        {"wifisession", &CommandInterface::cmdWiFiSession, "wifisession <on> || <off>"}}; // Crashes on valid input (wifisession on || off)
 
     // Command output buffer
     char cmdOut_[CMD_OUT_SIZE];

@@ -6,10 +6,6 @@
 // config.h
 // useful globals definitions here
 
-// for DS3231 control register access (writing alarms)
-#define DS3231_ADDRESS 0x68
-#define DS3231_CONTROL 0x0E
-
 namespace Pins
 {
 constexpr uint8_t TOUCH_IRQ = 6;
@@ -31,7 +27,7 @@ constexpr uint8_t RFID_RST = 39;
 constexpr uint8_t DS3231_SQW = 18;
 
 // MAX98357A
-constexpr uint8_t AMP_BCLK = 1; // bit clock
+constexpr uint8_t AMP_BCLK = 3; // bit clock
 constexpr uint8_t AMP_LRC = 15; // left-right clock
 constexpr uint8_t AMP_DIN = 2;  // data in
 constexpr uint8_t AMP_SD = 42;  // shutdown
@@ -41,10 +37,11 @@ constexpr uint8_t SD_CS = 5;
 
 // RGB strip control
 constexpr uint8_t RGB_DIN = 41;
-} // namespace Pins
 
-// For light strip
-constexpr uint8_t NUM_LEDS = 144;
+// TFT backlight control
+constexpr uint8_t PHOTORESISTOR_IN = 1;
+constexpr uint8_t TFT_BACKLIGHT = 38;
+} // namespace Pins
 
 /*
 ========================================
@@ -67,5 +64,5 @@ constexpr const char *ALARM_CARD_UID = "12345";
 // Blynk inegration
 #define *BLYNK_TEMPLATE_ID "tempID"
 #define *BLYNK_TEMPLATE_NAME "Custom Clock 2"
-#define *BLYNK_AUTH "auth code"
+#define *BLYNK_AUTH "auth code" // Individual to device
 */

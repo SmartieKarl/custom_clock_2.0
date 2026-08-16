@@ -30,7 +30,7 @@ class AlarmSystem
     AlarmTime getAlarm();
     void setAlarm(uint8_t hr, uint8_t min, bool enable);
 
-    const uint8_t getAlarmVolume() const;
+    uint8_t getAlarmVolume() const;
     void setAlarmVolume(uint8_t volume);
 
     const char *getAlarmTrackFilePath() const;
