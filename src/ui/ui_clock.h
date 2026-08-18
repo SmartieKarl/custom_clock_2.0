@@ -11,6 +11,8 @@ extern "C" {
 #endif
 
 // SCREEN: ui_clock
+extern void ui_update_clock_face();
+extern void ui_update_weather_panel(bool valid, const char *imgID, uint8_t temp);
 extern void ui_clock_screen_init(void);
 extern void ui_clock_screen_destroy(void);
 extern lv_obj_t * ui_clock;

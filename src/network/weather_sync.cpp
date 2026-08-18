@@ -2,6 +2,7 @@
 #include "config.h"
 #include "network_manager.h"
 #include "scheduler.h"
+#include "ui.h"
 
 #include <HTTPClient.h>
 #include <cstdlib>
@@ -9,7 +10,6 @@
 
 WeatherSync weatherSync; // Global shared instance
 
-EXT_RAM_ATTR uint8_t WeatherSync::iconBuffer_[MAX_WEATHER_ICON_SIZE]; // Static weather icon buffer
 namespace
 {
 bool parseJsonInt(const char *json, const char *key, int &value)
@@ -108,16 +108,20 @@ bool WeatherSync::begin()
     return taskHandle_ != NULL;
 }
 
-// Syncs weather from OpenWeatherMap
+// Light wrapper that both calls sync_() and updates the weather panel
 bool WeatherSync::sync()
 {
+    bool success = sync_();
+    if (success)
+        ui_update_weather_panel(snapshot_.valid, snapshot_.iconCode, snapshot_.tempF);
+
+    return success;
+}
+
+// Syncs weather from OpenWeatherMap
+bool WeatherSync::sync_()
+{
     snapshot_.valid = false;
-    snapshot_.tempC = 0;
-    snapshot_.tempMaxC = 0;
-    snapshot_.tempMinC = 0;
-    snapshot_.condition[0] = '\0';
-    snapshot_.iconCode[0] = '\0';
-    snapshot_.updatedAt = 0;
 
     if (!networkManager.startWiFiSession())
         return false;
@@ -165,22 +169,16 @@ bool WeatherSync::sync()
 
     // Parse Weather Metrics
     bool success = true;
-    success = parseJsonInt(payload, "temp", snapshot_.tempC) && success;
-    success = parseJsonInt(payload, "temp_max", snapshot_.tempMaxC) && success;
-    success = parseJsonInt(payload, "temp_min", snapshot_.tempMinC) && success;
+    success = parseJsonInt(payload, "temp", snapshot_.tempF) && success;
+    success = parseJsonInt(payload, "temp_max", snapshot_.tempMaxF) && success;
+    success = parseJsonInt(payload, "temp_min", snapshot_.tempMinF) && success;
     success = parseWeatherCondition(payload, snapshot_.condition, sizeof(snapshot_.condition)) && success;
     success = parseJsonString(payload, "icon", snapshot_.iconCode, sizeof(snapshot_.iconCode)) && success;
-
-    // Fetch the 50x50 PNG directly into PSRAM if JSON parsing succeeded
-    if (success)
-    {
-        success = downloadIcon_(snapshot_.iconCode);
-    }
 
     if (success)
     {
         snapshot_.valid = true;
-        snapshot_.updatedAt = static_cast<uint32_t>(millis() / 1000);
+        snapshot_.lastValidUpdateAt = static_cast<uint32_t>(millis() / 1000);
     }
 
     networkManager.endWiFiSession();
@@ -202,64 +200,8 @@ void WeatherSync::taskRunner_(void *pvParameters)
     for (;;)
     {
         ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
-        instance->sync();
+        if (instance->sync_())
+            ui_update_weather_panel(instance->snapshot_.valid, instance->snapshot_.iconCode, instance->snapshot_.tempF);
         // LOG IMPLEMENTATION HERE (if not sync)
     }
-}
-
-// Downloads a 50x50 weather status icon from rodrigokamada's wonderful icon repo
-bool WeatherSync::downloadIcon_(const char *iconCode)
-{
-    if (!iconCode || iconCode[0] == '\0')
-        return false;
-
-    char imgUrl[256];
-    std::snprintf(
-        imgUrl,
-        sizeof(imgUrl),
-        "https://rodrigokamada.github.io/openweathermap/images/%s_t.png",
-        iconCode);
-
-    HTTPClient http;
-    http.setTimeout(10000);
-
-    if (!http.begin(imgUrl))
-        return false;
-
-    const int code = http.GET();
-    if (code != HTTP_CODE_OK)
-    {
-        http.end();
-        return false;
-    }
-
-    int totalLen = http.getSize();
-    
-    // Ensure downloaded image fits inside static buffer
-    if (totalLen <= 0 || static_cast<size_t>(totalLen) > MAX_WEATHER_ICON_SIZE)
-    {
-        http.end();
-        return false;
-    }
-
-    WiFiClient *stream = http.getStreamPtr();
-    size_t bytesRead = 0;
-
-    // Stream PNG bytes into icon buffer
-    while (http.connected() && (bytesRead < static_cast<size_t>(totalLen)))
-    {
-        size_t availableBytes = stream->available();
-        if (availableBytes)
-        {
-            // Read directly into iconBuffer_ offset
-            int c = stream->readBytes(iconBuffer_ + bytesRead, availableBytes);
-            bytesRead += c;
-        }
-        vTaskDelay(1);
-    }
-
-    snapshot_.imgSize = bytesRead;
-    http.end();
-
-    return (bytesRead == static_cast<size_t>(totalLen));
 }

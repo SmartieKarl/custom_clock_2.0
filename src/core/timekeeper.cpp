@@ -42,6 +42,7 @@ void Timekeeper::begin(RTC_DS3231 &rtc)
 void Timekeeper::update()
 {
     xSemaphoreTake(mutex_, portMAX_DELAY);
+
     previousTime_ = currentTime_;
     currentTime_ = rtc_->now();
 
@@ -103,8 +104,6 @@ bool Timekeeper::tick()
 {
     xSemaphoreTake(mutex_, portMAX_DELAY);
     bool r = tick_;
-    if (tick_)
-        tick_ = false;
     xSemaphoreGive(mutex_);
     return r;
 }
@@ -114,8 +113,6 @@ bool Timekeeper::minuteTick()
 {
     xSemaphoreTake(mutex_, portMAX_DELAY);
     bool r = minuteTick_;
-    if (minuteTick_)
-        minuteTick_ = false;
     xSemaphoreGive(mutex_);
     return r;
 }
@@ -125,8 +122,6 @@ bool Timekeeper::hourTick()
 {
     xSemaphoreTake(mutex_, portMAX_DELAY);
     bool r = hourTick_;
-    if (hourTick_)
-        hourTick_ = false;
     xSemaphoreGive(mutex_);
     return r;
 }
@@ -136,8 +131,18 @@ bool Timekeeper::dayTick()
 {
     xSemaphoreTake(mutex_, portMAX_DELAY);
     bool r = dayTick_;
-    if (dayTick_)
-        dayTick_ = false;
     xSemaphoreGive(mutex_);
     return r;
+}
+
+// Call once per loop, at the end of the loop. Sets all tick flags to false.
+void Timekeeper::clearTickFlags()
+{
+    if (tick_)
+    {
+        tick_ = false;
+        minuteTick_ = false;
+        hourTick_ = false;
+        dayTick_ = false;
+    }
 }

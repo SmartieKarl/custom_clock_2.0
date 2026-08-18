@@ -37,4 +37,4 @@
 
 #define LOAD_GLCD // Font 1. Original Adafruit 8 pixel font needs ~1820 bytes in FLASH
 
-#define USE_DMA_TO_TFT // To make display flush calls non-blocking
+//#define USE_DMA_TO_TFT // To make display flush calls non-blocking

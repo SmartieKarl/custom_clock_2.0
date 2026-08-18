@@ -5,6 +5,8 @@
 
 #include "ui.h"
 
+#include "timekeeper.h"
+
 lv_obj_t * ui_clock = NULL;
 lv_obj_t * ui_LED_Toggle_Button2 = NULL;
 lv_obj_t * ui_clockFace = NULL;
@@ -16,6 +18,58 @@ lv_obj_t * ui_weather = NULL;
 lv_obj_t * ui_weatherIcon = NULL;
 lv_obj_t * ui_weatherTemp = NULL;
 lv_obj_t * ui_Button8 = NULL;
+
+// update functions
+void ui_update_clock_face()
+{
+    DateTime time = timekeeper.time();
+
+    lv_label_set_text_fmt(ui_clockFaceH, "%02d", time.hour());
+    lv_label_set_text_fmt(ui_clockFaceM, "%02d", time.minute());
+    lv_label_set_text_fmt(ui_clockFaceS, "%02d", time.second());
+}
+
+void ui_update_weather_panel(bool valid, const char *imgID, uint8_t temp)
+{
+    if (!valid)
+    {
+        // Hide the weather panel
+        lv_obj_add_flag(ui_weather, LV_OBJ_FLAG_HIDDEN);
+        return;
+    }
+
+    // Show the weather panel
+    lv_obj_clear_flag(ui_weather, LV_OBJ_FLAG_HIDDEN);
+
+    // Set temperature
+    lv_label_set_text_fmt(ui_weatherTemp, "%u°", temp);
+
+    // Weather icon lookup
+    const lv_img_dsc_t *weatherIcon = nullptr;
+
+    if (strcmp(imgID, "01d") == 0) weatherIcon = &ui_img_01d_png;
+    else if (strcmp(imgID, "01n") == 0) weatherIcon = &ui_img_01n_png;
+    else if (strcmp(imgID, "02d") == 0) weatherIcon = &ui_img_02d_png;
+    else if (strcmp(imgID, "02n") == 0) weatherIcon = &ui_img_02n_png;
+    else if (strcmp(imgID, "03d") == 0) weatherIcon = &ui_img_03d_png;
+    else if (strcmp(imgID, "03n") == 0) weatherIcon = &ui_img_03n_png;
+    else if (strcmp(imgID, "04d") == 0) weatherIcon = &ui_img_04d_png;
+    else if (strcmp(imgID, "04n") == 0) weatherIcon = &ui_img_04n_png;
+    else if (strcmp(imgID, "09d") == 0) weatherIcon = &ui_img_09d_png;
+    else if (strcmp(imgID, "09n") == 0) weatherIcon = &ui_img_09n_png;
+    else if (strcmp(imgID, "10d") == 0) weatherIcon = &ui_img_10d_png;
+    else if (strcmp(imgID, "10n") == 0) weatherIcon = &ui_img_10n_png;
+    else if (strcmp(imgID, "11d") == 0) weatherIcon = &ui_img_11d_png;
+    else if (strcmp(imgID, "11n") == 0) weatherIcon = &ui_img_11n_png;
+    else if (strcmp(imgID, "13d") == 0) weatherIcon = &ui_img_13d_png;
+    else if (strcmp(imgID, "13n") == 0) weatherIcon = &ui_img_13n_png;
+    else if (strcmp(imgID, "50d") == 0) weatherIcon = &ui_img_50d_png;
+    else if (strcmp(imgID, "50n") == 0) weatherIcon = &ui_img_50n_png;
+
+    if (weatherIcon != nullptr)
+        lv_img_set_src(ui_weatherIcon, weatherIcon);
+}
+
 // event funtions
 void ui_event_LED_Toggle_Button2(lv_event_t * e)
 {
@@ -79,7 +133,7 @@ void ui_clock_screen_init(void)
     lv_obj_clear_flag(ui_clockFace, LV_OBJ_FLAG_CLICKABLE | LV_OBJ_FLAG_SCROLLABLE);      /// Flags
 
     ui_clockFaceM = lv_label_create(ui_clockFace);
-    lv_obj_set_width(ui_clockFaceM, LV_SIZE_CONTENT);   /// 1
+    lv_obj_set_width(ui_clockFaceM, 122);
     lv_obj_set_height(ui_clockFaceM, LV_SIZE_CONTENT);    /// 1
     lv_obj_set_x(ui_clockFaceM, 153);
     lv_obj_set_y(ui_clockFaceM, 0);
@@ -101,7 +155,7 @@ void ui_clock_screen_init(void)
     lv_obj_set_style_text_font(ui_clockFaceC, &ui_font_digital128, LV_PART_MAIN | LV_STATE_DEFAULT);
 
     ui_clockFaceS = lv_label_create(ui_clockFace);
-    lv_obj_set_width(ui_clockFaceS, LV_SIZE_CONTENT);   /// 1
+    lv_obj_set_width(ui_clockFaceS, 46);
     lv_obj_set_height(ui_clockFaceS, LV_SIZE_CONTENT);    /// 1
     lv_obj_set_x(ui_clockFaceS, 275);
     lv_obj_set_y(ui_clockFaceS, 26);
@@ -112,7 +166,7 @@ void ui_clock_screen_init(void)
     lv_obj_set_style_text_font(ui_clockFaceS, &ui_font_digital48, LV_PART_MAIN | LV_STATE_DEFAULT);
 
     ui_clockFaceH = lv_label_create(ui_clockFace);
-    lv_obj_set_width(ui_clockFaceH, LV_SIZE_CONTENT);   /// 1
+    lv_obj_set_width(ui_clockFaceH, 122);
     lv_obj_set_height(ui_clockFaceH, LV_SIZE_CONTENT);    /// 1
     lv_obj_set_x(ui_clockFaceH, 10);
     lv_obj_set_y(ui_clockFaceH, 0);
@@ -160,6 +214,9 @@ void ui_clock_screen_init(void)
     lv_obj_add_event_cb(ui_LED_Toggle_Button2, ui_event_LED_Toggle_Button2, LV_EVENT_ALL, NULL);
     lv_obj_add_event_cb(ui_Button8, ui_event_Button8, LV_EVENT_ALL, NULL);
 
+    // Update to initial values
+    ui_update_clock_face();
+    ui_update_weather_panel(false, nullptr, 0);
 }
 
 void ui_clock_screen_destroy(void)

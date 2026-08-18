@@ -48,7 +48,6 @@ class BrightnessControl
     uint8_t targetBrightness_;
 
     unsigned long lastFadeUpdate_;
-    unsigned long lastAmbientUpdate_;
 };
 
 extern BrightnessControl brightnessControl; // Universal BrightnessControl

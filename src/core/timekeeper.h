@@ -26,6 +26,8 @@ class Timekeeper
     bool hourTick();
     bool dayTick();
 
+    void clearTickFlags();
+
   private:
     RTC_DS3231 *rtc_;
 

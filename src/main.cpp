@@ -53,7 +53,7 @@ void my_disp_flush(lv_disp_drv_t *disp_drv, const lv_area_t *area, lv_color_t *c
 
     tft.startWrite();
     tft.setAddrWindow(area->x1, area->y1, w, h);
-    tft.pushPixelsDMA((uint16_t *)color_p, w * h);
+    tft.pushColors((uint16_t *)color_p, w * h);
     tft.endWrite();
 
     lv_disp_flush_ready(disp_drv);
@@ -180,11 +180,8 @@ void setup()
     bool fail = false, wait = false;
     // TFT
     tft.init();
-    tft.setRotation(3);
-    tft.initDMA();
+    tft.setRotation(1);
 
-    uint16_t calData[5] = {375, 3454, 438, 3143, 7};
-    // tft.setTouch(calData);
     tft.fillScreen(TFT_BLACK);
     tft.setTextFont(1);
     tft.setCursor(0, 0);
@@ -356,8 +353,11 @@ void loop()
         Run UI updates, update clock screen, etc. here
         */
 
+        ui_update_clock_face();
         scheduler.run();
     }
+
+    timekeeper.clearTickFlags();
     yield();
 }
 

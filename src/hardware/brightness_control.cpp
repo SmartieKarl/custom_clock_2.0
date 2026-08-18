@@ -1,4 +1,5 @@
 #include "brightness_control.h"
+#include "timekeeper.h"
 
 using namespace BrightnessConfig;
 
@@ -9,8 +10,7 @@ BrightnessControl::BrightnessControl(uint8_t pwmPin, uint8_t photoresistorPin)
       photoresistorPin_(photoresistorPin),
       currentBrightness_(BRIGHTNESS_MAX),
       targetBrightness_(BRIGHTNESS_MAX),
-      lastFadeUpdate_(0),
-      lastAmbientUpdate_(0)
+      lastFadeUpdate_(0)
 {
 }
 
@@ -57,12 +57,14 @@ void BrightnessControl::updateAmbient()
 {
     updateFade();
 
-    unsigned long now = millis();
-    if (now - lastAmbientUpdate_ < LIGHT_UPDATE_INTERVAL)
+    if (!timekeeper.tick())
         return;
-    lastAmbientUpdate_ = now;
 
     uint16_t light = constrain(readLightSensor(), LIGHT_SENSOR_MIN, LIGHT_SENSOR_MAX);
-    targetBrightness_ = map(light, LIGHT_SENSOR_MIN, LIGHT_SENSOR_MAX,
-                             BRIGHTNESS_MIN, BRIGHTNESS_MAX);
+    targetBrightness_ = map(
+        light,
+        LIGHT_SENSOR_MIN,
+        LIGHT_SENSOR_MAX,
+        BRIGHTNESS_MAX,
+        BRIGHTNESS_MIN);
 }
